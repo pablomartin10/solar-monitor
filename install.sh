@@ -4,13 +4,19 @@ set -e
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║                    Solar Monitor Installation Script                       ║
 # ║                                                                            ║
-# ║ Automates setup of Docker, environment variables, and project startup    ║
+# ║ Complete setup: clones repo, verifies files, configures, and starts       ║
+# ║                                                                            ║
+# ║ Usage:                                                                     ║
+# ║   bash install.sh                 (run from within project)               ║
+# ║   bash install.sh /path/to/clone   (clone to specific path)               ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_NAME="solar-monitor"
+GITHUB_REPO="https://github.com/pablomartin10/solar-monitor.git"
 ENV_FILE="$SCRIPT_DIR/.env"
 DATA_DIR="$SCRIPT_DIR/data"
+CLONE_PATH="${1:-.}"
 
 # Color codes for output
 RED='\033[0;31m'
@@ -43,6 +49,93 @@ print_warning() {
 
 print_info() {
     echo -e "${BLUE}ℹ ${1}${NC}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Repository setup
+# ─────────────────────────────────────────────────────────────────────────────
+
+is_solar_monitor_repo() {
+    # Check if we're in a solar-monitor repo directory
+    [ -f "$1/docker-compose.yml" ] && [ -d "$1/api" ] && [ -d "$1/dashboard" ] && [ -d "$1/config" ]
+}
+
+clone_repo() {
+    local target_dir="$1"
+    local temp_clone="/tmp/${PROJECT_NAME}_$$"
+    
+    print_header "Clonando repositorio"
+    
+    if [ -d "$target_dir/$PROJECT_NAME" ] && is_solar_monitor_repo "$target_dir/$PROJECT_NAME"; then
+        print_info "El repositorio ya existe en $target_dir/$PROJECT_NAME"
+        SCRIPT_DIR="$target_dir/$PROJECT_NAME"
+        return
+    fi
+    
+    print_info "Descargando desde $GITHUB_REPO..."
+    
+    if ! command -v git &> /dev/null; then
+        print_error "Git no está instalado"
+        echo ""
+        echo "Instala Git:"
+        echo "  Ubuntu/Debian: sudo apt-get install git"
+        echo "  macOS: brew install git"
+        echo "  O descarga desde: https://git-scm.com/"
+        exit 1
+    fi
+    
+    if git clone "$GITHUB_REPO" "$temp_clone" 2>/dev/null; then
+        mkdir -p "$target_dir"
+        mv "$temp_clone" "$target_dir/$PROJECT_NAME"
+        SCRIPT_DIR="$target_dir/$PROJECT_NAME"
+        print_success "Repositorio clonado en $SCRIPT_DIR"
+    else
+        print_error "No se pudo clonar el repositorio"
+        exit 1
+    fi
+}
+
+verify_project_structure() {
+    print_header "Verificando estructura del proyecto"
+    
+    local required_files=(
+        "docker-compose.yml"
+        "api/main.py"
+        "api/requirements.txt"
+        "api/Dockerfile"
+        "api/poller.py"
+        "api/influx.py"
+        "api/parser.py"
+        "dashboard/index.html"
+        "dashboard/nginx.conf"
+        "config/deye_hybrid.yaml"
+        "config/deye_4mppt.yaml"
+    )
+    
+    local missing=()
+    
+    for file in "${required_files[@]}"; do
+        if [ ! -f "$SCRIPT_DIR/$file" ]; then
+            missing+=("$file")
+            print_error "Falta: $file"
+        else
+            print_success "Encontrado: $file"
+        fi
+    done
+    
+    if [ ${#missing[@]} -gt 0 ]; then
+        print_header "⚠ Error: Faltan archivos del proyecto"
+        echo ""
+        echo "Archivos faltantes:"
+        for f in "${missing[@]}"; do
+            echo "  • $f"
+        done
+        echo ""
+        echo "Soluciones:"
+        echo "  1. Clona el repo: git clone $GITHUB_REPO"
+        echo "  2. Descarga de: https://github.com/pablomartin10/solar-monitor"
+        exit 1
+    fi
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -260,15 +353,24 @@ show_next_steps() {
     echo ""
     
     echo -e "${GREEN}Comandos útiles:${NC}"
-    echo "  Ver logs:           docker-compose logs -f"
-    echo "  Ver logs de API:    docker-compose logs -f api"
-    echo "  Parar servicios:    docker-compose down"
-    echo "  Reiniciar:          docker-compose restart"
+    echo "  Ver logs:           docker compose logs -f"
+    echo "  Ver logs de API:    docker compose logs -f api"
+    echo "  Ver health status:  curl http://localhost/api/health | jq ."
+    echo "  Parar servicios:    docker compose down"
+    echo "  Reiniciar:          docker compose restart"
+    echo ""
+    
+    echo -e "${GREEN}Documentación:${NC}"
+    echo "  • README.md         - Instalación y configuración"
+    echo "  • API_GUIDE.md      - Ejemplos de API REST"
+    echo "  • IMPROVEMENTS.md   - Detalles técnicos de mejoras"
     echo ""
     
     echo -e "${YELLOW}⚠ Nota importante:${NC}"
-    echo "  El archivo .env contiene credenciales. Guárdalo en lugar seguro."
-    echo "  Consulta el README para instrucciones detalladas."
+    echo "  • El archivo .env contiene credenciales. Guárdalo en lugar seguro."
+    echo "  • Para clonar desde GitHub sin este script:"
+    echo "    git clone $GITHUB_REPO"
+    echo "    cd solar-monitor && bash install.sh"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -278,6 +380,29 @@ show_next_steps() {
 main() {
     clear
     print_header "🌞 Solar Monitor - Instalación Automatizada"
+    
+    # Check if we're in the right place
+    if ! is_solar_monitor_repo "$SCRIPT_DIR"; then
+        print_info "No se detectó repositorio de Solar Monitor en el directorio actual"
+        echo ""
+        read -p "¿Deseas clonar el repositorio? (s/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Ss]$ ]]; then
+            read -p "¿Dónde deseas clonar? (por defecto: directorio actual): " clone_target
+            clone_target=${clone_target:-.}
+            clone_repo "$clone_target"
+            
+            # Update paths after clone
+            ENV_FILE="$SCRIPT_DIR/.env"
+            DATA_DIR="$SCRIPT_DIR/data"
+        else
+            print_error "Abortado por el usuario"
+            exit 0
+        fi
+    fi
+    
+    # Verify all required files exist
+    verify_project_structure
     
     check_requirements
     setup_env

@@ -27,27 +27,45 @@ solar-monitor/
 
 ## Instalación Rápida ⚡
 
-### Opción 1: Automática (Recomendado)
+### ✨ Opción 1: Una línea (Más fácil)
+
+Sin necesidad de clonar nada:
+
 ```bash
+bash <(curl -s https://raw.githubusercontent.com/pablomartin10/solar-monitor/main/quick-start.sh)
+```
+
+Esto:
+1. ✅ Clona el repositorio automáticamente
+2. ✅ Verifica requisitos (Git, Docker)
+3. ✅ Ejecuta la instalación completa
+4. ✅ Inicia todos los servicios
+
+### ✨ Opción 2: Clona primero (Clásico)
+
+```bash
+git clone https://github.com/pablomartin10/solar-monitor.git
+cd solar-monitor
 bash install.sh
 ```
 
-El script realiza automáticamente:
+El script `install.sh` realiza automáticamente:
 1. ✅ Verifica que Docker esté instalado
-2. ✅ Genera `.env` con credenciales seguras
-3. ✅ Crea directorios necesarios
-4. ✅ Inicia todos los servicios
-5. ✅ Verifica que todo funciona
-6. ✅ Muestra URLs de acceso
+2. ✅ Verifica estructura del proyecto
+3. ✅ Genera `.env` con credenciales seguras
+4. ✅ Crea directorios necesarios
+5. ✅ Inicia todos los servicios
+6. ✅ Verifica salud de servicios
+7. ✅ Muestra URLs de acceso
 
-### Opción 2: Manual
+### ✨ Opción 3: Manual (Si prefieres control total)
 
 #### Requisitos
 - Docker + Docker Compose v2
 - El host debe tener acceso de red a los data loggers Solarman
 
 #### Configuración
-Crea o edita `.env` con tus valores:
+Crea o edita `.env`:
 ```env
 INFLUXDB_USER=influx_admin
 INFLUXDB_PASSWORD=tu-password-seguro
@@ -63,28 +81,35 @@ DASHBOARD_PORT=80         # puerto del dashboard
 docker compose up -d
 ```
 
-El primer inicio descarga las imágenes y configura InfluxDB automáticamente (~1-2 min).
+---
 
-#### Acceder
-- **Dashboard**: http://localhost (o el puerto configurado)
-- **API Swagger UI**: http://localhost/api/docs
+## 📋 Primeros Pasos
+
+1. **Espera a que arranque** (~2 minutos en el primer inicio)
+
+2. **Accede al dashboard**: http://localhost (o puerto configurado)
+
+3. **Pulsa "+ Añadir inversor"** y completa:
+   - **Nombre**: p.ej., "Casa principal"
+   - **IP/Host**: IP del data logger Solarman
+   - **Puerto**: 8899 (por defecto)
+   - **SN Logger**: número de serie del device
+   - **Tipo**: `Hybrid 2MPPT` o `4 MPPT`
+   - **Slave ID**: 1 (en la mayoría de casos)
+
+4. **¡Listo!** Los datos se actualizarán cada 60 segundos
+
+### URLs útiles
+- **Dashboard**: http://localhost
+- **API Documentation**: http://localhost/api/docs
 - **InfluxDB UI**: http://localhost:8086
 - **Health Check**: http://localhost/api/health
 
-### Añadir Inversores
-Desde el dashboard, pulsa **"+ Añadir inversor"**:
-- **Nombre**: identificador libre (p.ej., "Casa principal")
-- **IP/Host**: IP del data logger Solarman (no del inversor)
-- **Puerto**: 8899 (por defecto Solarman)
-- **SN Logger**: número de serie del data logger (ver etiqueta del dispositivo)
-- **Tipo**: `Hybrid 2MPPT` o `4 MPPT`
-- **Slave ID**: 1 (en la mayoría de casos)
-
-> **Nota**: La validación rechaza:
+> **Nota**: La validación automática rechaza:
 > - IPs inválidas
 > - Puertos fuera de rango (1-65535)
-> - Tipos de inversor no soportados
-> - Duplicados (mismo host/puerto/serial)
+> - Tipos no soportados
+> - Duplicados
 
 ## API REST
 
@@ -163,25 +188,17 @@ docker compose down -v
 docker compose build api && docker compose up -d api
 ```
 
-## 🎯 Mejoras Recientes
+## 📚 Documentación
 
-### API
-- ✅ **Validación robusta** de parámetros (IP, puerto, slave ID, tipo)
-- ✅ **Detección de duplicados** automática
-- ✅ **Estadísticas de polling** (total de poleos, éxitos, fallos)
-- ✅ **Tracking de inversores** (fecha creación, errores)
-- ✅ **Documentación OpenAPI** en `/api/docs`
-- ✅ **Mejor manejo de errores** con mensajes descriptivos
-- ✅ **Límites de parámetros** bien definidos (ej: histórico máximo 30 días)
+Después de instalar, consulta:
 
-### Instalación
-- ✅ **Script de instalación automático** (`install.sh`)
-- ✅ **Generación segura de contraseñas** aleatorias
-- ✅ **Verificación de requisitos** (Docker, Docker Compose)
-- ✅ **Salud de servicios** verificada
-- ✅ **Interfaz amigable** con colores y progreso
-
-Ver documento [IMPROVEMENTS.md](IMPROVEMENTS.md) para detalles completos.
+| Documento | Propósito |
+|-----------|----------|
+| [INSTALL_GUIDE.md](INSTALL_GUIDE.md) | Guía detallada de instalación |
+| [API_GUIDE.md](API_GUIDE.md) | Ejemplos prácticos de API REST |
+| [IMPROVEMENTS.md](IMPROVEMENTS.md) | Detalles técnicos de mejoras |
+| [quick-start.sh](quick-start.sh) | Script para instalación rápida |
+| [install.sh](install.sh) | Script de instalación completo |
 
 ## Añadir más tipos de inversor
 
