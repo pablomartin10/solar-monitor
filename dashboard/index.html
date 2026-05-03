@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Monitor — Deye</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:#0e0f11;--surface:#161820;--surface2:#1e2028;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+    --text:#e8e9ed;--muted:#787c8a;
+    --amber:#f0a429;--amber-dim:rgba(240,164,41,0.12);
+    --green:#3ecf84;--blue:#4f9cf0;--red:#f05a5a;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;min-height:100vh;}
+  header{border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:10;}
+  .logo{display:flex;align-items:center;gap:10px;}
+  .logo-icon{width:28px;height:28px;background:var(--amber);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+  .logo-icon svg{width:16px;height:16px;stroke:#0e0f11;fill:none;stroke-width:2;}
+  .logo-text{font-size:15px;font-weight:500;}
+  .logo-text span{color:var(--amber);}
+  .header-right{display:flex;align-items:center;gap:10px;}
+  .last-update{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+  button{cursor:pointer;border:none;font-family:inherit;font-size:13px;border-radius:7px;transition:all 0.15s;}
+  .btn-primary{background:var(--amber);color:#0e0f11;padding:8px 14px;font-weight:500;}
+  .btn-primary:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);padding:7px 13px;}
+  .btn-ghost:hover{background:var(--surface2);color:var(--text);}
+  .btn-icon{background:var(--surface2);color:var(--muted);border:1px solid var(--border);padding:6px 9px;font-size:15px;line-height:1;}
+  .btn-icon:hover{color:var(--text);border-color:var(--border2);}
+  .btn-danger{background:rgba(240,90,90,0.1);color:var(--red);border:1px solid rgba(240,90,90,0.2);padding:6px 12px;font-size:12px;}
+  .btn-danger:hover{background:rgba(240,90,90,0.2);}
+
+  main{max-width:1300px;margin:0 auto;padding:24px;}
+  .empty-state{text-align:center;padding:80px 20px;}
+  .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.25;}
+  .empty-state h2{font-size:18px;font-weight:400;color:var(--muted);margin-bottom:8px;}
+  .empty-state p{font-size:13px;color:var(--muted);opacity:.7;margin-bottom:24px;}
+
+  .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(540px,1fr));gap:20px;}
+
+  .inv-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .inv-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .inv-title{display:flex;align-items:center;gap:10px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;}
+  .dot.offline{background:var(--red);box-shadow:0 0 6px var(--red);}
+  .dot.unknown,.dot.loading{background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 1.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+  .inv-name{font-size:14px;font-weight:500;}
+  .inv-meta{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .inv-actions{display:flex;gap:6px;}
+
+  .inv-body{padding:16px 18px;}
+  .group-label{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:10px;}
+  .mrow{display:grid;gap:8px;margin-bottom:14px;}
+  .mrow.c4{grid-template-columns:repeat(4,1fr);}
+  .mrow.c3{grid-template-columns:repeat(3,1fr);}
+  .mrow.c2{grid-template-columns:repeat(2,1fr);}
+  .mcard{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;cursor:default;}
+  .mcard.clickable{cursor:pointer;}
+  .mcard.clickable:hover{border-color:var(--border2);background:#252830;}
+  .mlabel{font-size:11px;color:var(--muted);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mval{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500;}
+  .mval.solar{color:var(--amber);}
+  .mval.battery{color:var(--green);}
+  .mval.grid{color:var(--blue);}
+  .mval.neutral{color:var(--text);}
+  .mval.warn{color:var(--red);}
+  .munit{font-size:10px;color:var(--muted);margin-left:2px;}
+  .msub{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:3px;}
+
+  .soc-wrap{margin:0 0 14px;}
+  .soc-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .soc-bg{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;border:1px solid var(--border);}
+  .soc-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+  hr.divider{border:none;border-top:1px solid var(--border);margin:4px 0 14px;}
+
+  .no-data{color:var(--muted);font-size:13px;font-family:'IBM Plex Mono',monospace;padding:20px 0;text-align:center;}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;width:460px;max-width:95vw;transform:translateY(8px);transition:transform .2s;}
+  .overlay.open .modal{transform:translateY(0);}
+  .modal h2{font-size:16px;font-weight:500;margin-bottom:20px;}
+  .frow{margin-bottom:14px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+  input,select{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;transition:border-color .15s;}
+  input:focus,select:focus{border-color:var(--amber);}
+  select option{background:var(--surface2);}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+  .err{font-size:12px;color:var(--red);margin-top:4px;display:none;}
+  .err.show{display:block;}
+
+  /* Chart modal */
+  .chart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .chart-overlay.open{opacity:1;pointer-events:all;}
+  .chart-modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;width:700px;max-width:96vw;}
+  .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .chart-header h3{font-size:15px;font-weight:500;}
+  .chart-controls{display:flex;gap:8px;margin-bottom:14px;align-items:center;}
+  .chart-controls select{width:auto;font-size:12px;padding:6px 10px;}
+  .chart-wrap{position:relative;height:280px;}
+
+  .spin{animation:spin 1s linear infinite;display:inline-block;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .badge{font-size:10px;padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;vertical-align:middle;}
+  .badge.green{background:rgba(62,207,132,.15);color:var(--green);}
+  .badge.red{background:rgba(240,90,90,.15);color:var(--red);}
+  .badge.amber{background:var(--amber-dim);color:var(--amber);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">Solar<span>Monitor</span></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-update" id="lastUpdate">–</span>
+    <button class="btn-ghost" id="refreshBtn" onclick="refreshAll()">
+      <span id="refreshIco">↻</span> Actualizar
+    </button>
+    <button class="btn-primary" onclick="openAddModal()">+ Añadir inversor</button>
+  </div>
+</header>
+
+<main>
+  <div id="emptyState" class="empty-state">
+    <div class="empty-icon">☀</div>
+    <h2>Sin inversores configurados</h2>
+    <p>Añade tu primer inversor para comenzar.</p>
+    <button class="btn-primary" onclick="openAddModal()">+ Añadir inversor</button>
+  </div>
+  <div id="invGrid" class="inv-grid" style="display:none;"></div>
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Añadir inversor</h2>
+    <div class="frow"><label>Nombre</label><input id="fName" placeholder="Casa principal"/></div>
+    <div class="fgrid">
+      <div class="frow">
+        <label>IP / Host</label>
+        <input id="fHost" placeholder="192.168.1.100"/>
+        <div class="err" id="errHost">IP inválida</div>
+      </div>
+      <div class="frow"><label>Puerto</label><input type="number" id="fPort" value="8899"/></div>
+    </div>
+    <div class="frow"><label>Número de serie (logger SN)</label><input id="fSerial" placeholder="2712345678"/></div>
+    <div class="fgrid">
+      <div class="frow">
+        <label>Tipo</label>
+        <select id="fType">
+          <option value="hybrid">Deye Hybrid (2 MPPT)</option>
+          <option value="4mppt">Deye 4 MPPT</option>
+        </select>
+      </div>
+      <div class="frow"><label>Slave ID Modbus</label><input type="number" id="fSlave" value="1"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeForm()">Cancelar</button>
+      <button class="btn-primary" onclick="saveInverter()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chart Modal -->
+<div class="chart-overlay" id="chartOverlay">
+  <div class="chart-modal">
+    <div class="chart-header">
+      <h3 id="chartTitle">Histórico</h3>
+      <button class="btn-ghost" onclick="closeChart()">✕</button>
+    </div>
+    <div class="chart-controls">
+      <select id="chartHours" onchange="reloadChart()">
+        <option value="6">Últimas 6 h</option>
+        <option value="24" selected>Últimas 24 h</option>
+        <option value="48">Últimas 48 h</option>
+        <option value="168">Última semana</option>
+      </select>
+      <span id="chartStatus" style="font-size:12px;color:var(--muted);"></span>
+    </div>
+    <div class="chart-wrap"><canvas id="histChart" role="img" aria-label="Histórico de la métrica seleccionada"></canvas></div>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+let inverters = [];
+let editingId = null;
+let chartState = { invId: null, metric: null, chart: null };
+let pollTimer = null;
+
+// ── Fetch helpers ──────────────────────────────────────────────────────────
+
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.status === 204 ? null : r.json();
+}
+
+// ── Load & refresh ─────────────────────────────────────────────────────────
+
+async function loadAll() {
+  try {
+    inverters = await apiFetch('/inverters');
+    render();
+    updateTimestamp();
+  } catch(e) {
+    console.error('Failed to load inverters:', e);
+  }
+}
+
+async function refreshAll() {
+  const ico = document.getElementById('refreshIco');
+  ico.classList.add('spin');
+  try {
+    await Promise.all(inverters.map(inv =>
+      apiFetch(`/inverters/${inv.id}/refresh`, { method: 'POST' }).catch(() => {})
+    ));
+    await new Promise(r => setTimeout(r, 1500));
+    await loadAll();
+  } finally {
+    ico.classList.remove('spin');
+  }
+}
+
+async function refreshOne(id) {
+  await apiFetch(`/inverters/${id}/refresh`, { method: 'POST' }).catch(() => {});
+  await new Promise(r => setTimeout(r, 1500));
+  await loadAll();
+}
+
+function updateTimestamp() {
+  document.getElementById('lastUpdate').textContent =
+    'Actualizado ' + new Date().toLocaleTimeString('es-ES');
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+
+function render() {
+  const empty = document.getElementById('emptyState');
+  const grid  = document.getElementById('invGrid');
+  if (!inverters.length) { empty.style.display=''; grid.style.display='none'; return; }
+  empty.style.display='none'; grid.style.display='';
+
+  grid.innerHTML = inverters.map(inv => {
+    const dotCls = inv.status === 'online' ? '' : inv.status === 'offline' ? 'offline' : 'loading';
+    const typeLbl = inv.type === 'hybrid' ? 'Hybrid 2MPPT' : '4 MPPT';
+    const snLabel = inv.serial || 'SN N/A';
+    const body = inv.status === 'loading' || inv.status === 'unknown'
+      ? `<div class="no-data">Conectando…</div>`
+      : inv.status === 'offline' || !inv.data
+        ? `<div class="no-data">Sin datos — inversor desconectado</div>`
+        : (inv.type === 'hybrid' ? renderHybrid(inv) : render4MPPT(inv));
+
+    return `<div class="inv-card">
+      <div class="inv-header">
+        <div class="inv-title">
+          <div class="dot ${dotCls}"></div>
+          <div>
+            <div class="inv-name">${inv.name}
+              <span class="badge ${inv.status==='online'?'green':inv.status==='offline'?'red':'amber'}">${inv.status}</span>
+            </div>
+            <div class="inv-meta">${inv.host}:${inv.port} · ${snLabel} · ${typeLbl}</div>
+          </div>
+        </div>
+        <div class="inv-actions">
+          <button class="btn-icon" title="Editar" onclick="openEditModal('${inv.id}')">✎</button>
+          <button class="btn-icon" title="Actualizar" onclick="refreshOne('${inv.id}')">↻</button>
+          <button class="btn-danger" onclick="deleteInverter('${inv.id}')">Eliminar</button>
+        </div>
+      </div>
+      <div class="inv-body">${body}</div>
+    </div>`;
+  }).join('');
+}
+
+function metric(label, val, unit, colorClass, invId, metricName, sub='') {
+  const clickable = invId ? 'clickable' : '';
+  const onclick   = invId ? `onclick="openChart('${invId}','${metricName}','${label}')"` : '';
+  return `<div class="mcard ${clickable}" ${onclick} title="${invId?'Ver histórico':''}">
+    <div class="mlabel">${label}</div>
+    <div class="mval ${colorClass}">${val}<span class="munit">${unit}</span></div>
+    ${sub ? `<div class="msub">${sub}</div>` : ''}
+  </div>`;
+}
+
+function renderHybrid(inv) {
+  const d = inv.data;
+  const g = name => Object.entries(d).flatMap(([,items]) =>
+    Object.entries(items).filter(([k]) => k === name).map(([,v]) => v.value))[0];
+  const v = (group, name) => d[group]?.[name]?.value ?? null;
+
+  const pv1p = v('solar','PV1 Power'), pv2p = v('solar','PV2 Power');
+  const pv1V = v('solar','PV1 Voltage'), pv2V = v('solar','PV2 Voltage');
+  const pv1I = v('solar','PV1 Current'), pv2I = v('solar','PV2 Current');
+  const dailyP = v('solar','Daily Production'), totalP = v('solar','Total Production');
+  const soc = v('Battery','Battery SOC');
+  const batP = v('Battery','Battery Power'), batV = v('Battery','Battery Voltage');
+  const batI = v('Battery','Battery Current'), batT = v('Battery','Battery Temperature');
+  const batSt = v('Battery','Battery Status');
+  const gridP = v('Grid','Total Grid Power'), gridV1 = v('Grid','Grid Voltage L1');
+  const gridV2 = v('Grid','Grid Voltage L2'), freq = v('Inverter','Grid Frequency');
+  const loadP = v('Upload','Total Load Power'), loadD = v('Upload','Daily Load Consumption');
+  const dcTemp = v('Inverter','DC Temperature'), acTemp = v('Inverter','AC Temperature');
+  const runStatus = v('Inverter','Running Status');
+
+  const socColor = soc >= 60 ? 'var(--green)' : soc >= 30 ? 'var(--amber)' : 'var(--red)';
+  const batCls = batP > 50 ? 'solar' : batP < -50 ? 'battery' : 'neutral';
+  const gridCls = gridP < -50 ? 'solar' : gridP > 50 ? 'warn' : 'neutral';
+  const gridDir = gridP < -50 ? '↑ Exportando' : gridP > 50 ? '↓ Importando' : '≈ Equilibrio';
+  const id = inv.id;
+
+  return `
+    <div class="group-label">Solar · ${runStatus || ''}</div>
+    <div class="mrow c2">
+      ${metric('PV1 Potencia', pv1p??'–', 'W', 'solar', id, 'PV1 Power', `${pv1V}V · ${pv1I}A`)}
+      ${metric('PV2 Potencia', pv2p??'–', 'W', 'solar', id, 'PV2 Power', `${pv2V}V · ${pv2I}A`)}
+    </div>
+    <div class="mrow c3">
+      ${metric('Producción hoy', dailyP??'–', 'kWh', 'neutral', id, 'Daily Production')}
+      ${metric('Producción total', totalP??'–', 'kWh', 'neutral', id, 'Total Production')}
+      ${metric('Consumo actual', loadP??'–', 'W', 'neutral', id, 'Total Load Power', `Hoy: ${loadD??'–'} kWh`)}
+    </div>
+    <hr class="divider">
+    <div class="group-label">Batería · ${batSt??'–'}</div>
+    <div class="soc-wrap">
+      <div class="soc-top">
+        <span style="font-size:12px;color:var(--muted)">Estado de carga</span>
+        <span style="font-size:13px;font-weight:500;font-family:'IBM Plex Mono',monospace;color:${socColor}">${soc??'–'}%</span>
+      </div>
+      <div class="soc-bg"><div class="soc-fill" style="width:${soc??0}%;background:${socColor}"></div></div>
+    </div>
+    <div class="mrow c4">
+      ${metric('Potencia', (batP>0?'+':'')+batP??'–', 'W', batCls, id, 'Battery Power')}
+      ${metric('Tensión', batV??'–', 'V', 'neutral', id, 'Battery Voltage')}
+      ${metric('Corriente', batI??'–', 'A', 'neutral', id, 'Battery Current')}
+      ${metric('Temperatura', batT??'–', '°C', 'neutral', id, 'Battery Temperature')}
+    </div>
+    <hr class="divider">
+    <div class="group-label">Red · ${gridDir}</div>
+    <div class="mrow c4">
+      ${metric('Potencia red', (gridP>0?'+':'')+gridP??'–', 'W', gridCls, id, 'Total Grid Power')}
+      ${metric('Tensión L1', gridV1??'–', 'V', 'grid', null, '')}
+      ${metric('Tensión L2', gridV2??'–', 'V', 'grid', null, '')}
+      ${metric('Frecuencia', freq??'–', 'Hz', 'grid', id, 'Grid Frequency')}
+    </div>
+    <hr class="divider">
+    <div class="group-label">Inversor</div>
+    <div class="mrow c2">
+      ${metric('Temp. DC', dcTemp??'–', '°C', 'neutral', null, '')}
+      ${metric('Temp. AC', acTemp??'–', '°C', 'neutral', null, '')}
+    </div>
+  `;
+}
+
+function render4MPPT(inv) {
+  const d = inv.data;
+  const v = (group, name) => d[group]?.[name]?.value ?? null;
+  const id = inv.id;
+
+  const pvs = [1,2,3,4].map(n => ({
+    volt: v('solar', `PV${n} Voltage`),
+    curr: v('solar', `PV${n} Current`),
+  }));
+  const dailyP = v('solar','Daily Production'), totalP = v('solar','Total Production');
+  const acV = v('Grid','AC Voltage'), gridI = v('Grid','Grid Current');
+  const freq = v('Grid','AC Output Frequency');
+  const status = v('Inverter','Running Status');
+  const radT = v('Inverter','Radiator Temperature');
+  const totalAC = v('Inverter','Total AC Output Power (Active)');
+
+  const stCls = status==='Normal'?'battery':status==='Fault'?'warn':'solar';
+
+  return `
+    <div class="group-label">Solar · 4 MPPT</div>
+    <div class="mrow c4">
+      ${[1,2,3,4].map((n,i) => metric(`PV${n}`, pvs[i].volt??'–', 'V', 'solar', id, `PV${n} Voltage`, `${pvs[i].curr??'–'} A`)).join('')}
+    </div>
+    <div class="mrow c3">
+      ${metric('Potencia AC', totalAC??'–', 'W', 'solar', id, 'Total AC Output Power (Active)')}
+      ${metric('Producción hoy', dailyP??'–', 'kWh', 'neutral', id, 'Daily Production')}
+      ${metric('Producción total', totalP??'–', 'kWh', 'neutral', id, 'Total Production')}
+    </div>
+    <hr class="divider">
+    <div class="group-label">Red / Inversor</div>
+    <div class="mrow c4">
+      ${metric('Estado', status??'–', '', stCls, null, '')}
+      ${metric('Tensión AC', acV??'–', 'V', 'grid', id, 'AC Voltage')}
+      ${metric('Frecuencia', freq??'–', 'Hz', 'grid', id, 'AC Output Frequency')}
+      ${metric('Temp. radiador', radT??'–', '°C', 'neutral', id, 'Radiator Temperature')}
+    </div>
+  `;
+}
+
+// ── Chart modal ────────────────────────────────────────────────────────────
+
+async function openChart(invId, metricName, metricLabel) {
+  chartState.invId  = invId;
+  chartState.metric = metricName;
+  document.getElementById('chartTitle').textContent = metricLabel;
+  document.getElementById('chartOverlay').classList.add('open');
+  await reloadChart();
+}
+
+function closeChart() {
+  document.getElementById('chartOverlay').classList.remove('open');
+  if (chartState.chart) { chartState.chart.destroy(); chartState.chart = null; }
+}
+
+async function reloadChart() {
+  const hours = document.getElementById('chartHours').value;
+  const status = document.getElementById('chartStatus');
+  status.textContent = 'Cargando…';
+  try {
+    const rows = await apiFetch(`/inverters/${chartState.invId}/history?metric=${encodeURIComponent(chartState.metric)}&hours=${hours}`);
+    if (!rows.length) { status.textContent = 'Sin datos para este período.'; return; }
+    const labels = rows.map(r => {
+      const d = new Date(r.time);
+      return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    });
+    const values = rows.map(r => r.value);
+    status.textContent = `${rows.length} puntos`;
+
+    const ctx = document.getElementById('histChart').getContext('2d');
+    if (chartState.chart) chartState.chart.destroy();
+    chartState.chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: chartState.metric,
+          data: values,
+          borderColor: '#f0a429',
+          backgroundColor: 'rgba(240,164,41,0.08)',
+          borderWidth: 1.5,
+          pointRadius: rows.length > 100 ? 0 : 2,
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'#787c8a', font:{size:10}, maxTicksLimit:10, maxRotation:0 }, grid:{ color:'rgba(255,255,255,.05)' } },
+          y: { ticks: { color:'#787c8a', font:{size:11} }, grid:{ color:'rgba(255,255,255,.05)' } }
+        }
+      }
+    });
+  } catch(e) {
+    status.textContent = 'Error al cargar datos de InfluxDB.';
+  }
+}
+
+// ── Form modal ─────────────────────────────────────────────────────────────
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Añadir inversor';
+  ['fName','fHost','fSerial'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fPort').value = '8899';
+  document.getElementById('fType').value = 'hybrid';
+  document.getElementById('fSlave').value = '1';
+  document.getElementById('errHost').classList.remove('show');
+  document.getElementById('formOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const inv = inverters.find(i=>i.id===id);
+  if (!inv) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Editar inversor';
+  document.getElementById('fName').value   = inv.name;
+  document.getElementById('fHost').value   = inv.host;
+  document.getElementById('fPort').value   = inv.port;
+  document.getElementById('fSerial').value = inv.serial||'';
+  document.getElementById('fType').value   = inv.type;
+  document.getElementById('fSlave').value  = inv.slave||1;
+  document.getElementById('errHost').classList.remove('show');
+  document.getElementById('formOverlay').classList.add('open');
+}
+
+function closeForm() { document.getElementById('formOverlay').classList.remove('open'); }
+
+document.getElementById('formOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeForm(); });
+document.getElementById('chartOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeChart(); });
+
+async function saveInverter() {
+  const name   = document.getElementById('fName').value.trim()||'Inversor';
+  const host   = document.getElementById('fHost').value.trim();
+  const port   = parseInt(document.getElementById('fPort').value)||8899;
+  const serial = document.getElementById('fSerial').value.trim();
+  const type   = document.getElementById('fType').value;
+  const slave  = parseInt(document.getElementById('fSlave').value)||1;
+
+  if (!host) { document.getElementById('errHost').classList.add('show'); return; }
+  document.getElementById('errHost').classList.remove('show');
+
+  try {
+    if (editingId) {
+      await apiFetch(`/inverters/${editingId}`, { method:'PUT', body: JSON.stringify({name,host,port,serial,type,slave}) });
+    } else {
+      await apiFetch('/inverters', { method:'POST', body: JSON.stringify({name,host,port,serial,type,slave}) });
+    }
+    closeForm();
+    await loadAll();
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+  }
+}
+
+async function deleteInverter(id) {
+  const inv = inverters.find(i=>i.id===id);
+  if (!confirm(`¿Eliminar "${inv?.name}"?`)) return;
+  await apiFetch(`/inverters/${id}`, { method:'DELETE' });
+  await loadAll();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+
+loadAll();
+// Auto-refresh every 60 s
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>

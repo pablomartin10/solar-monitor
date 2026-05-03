@@ -1,0 +1,58 @@
+services:
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: solar_influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./api
+    container_name: solar_api
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    environment:
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+      - POLL_INTERVAL=${POLL_INTERVAL:-60}
+    expose:
+      - "8000"
+
+  dashboard:
+    image: nginx:alpine
+    container_name: solar_dashboard
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${DASHBOARD_PORT:-80}:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+      - ./dashboard/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  influxdb_data:
+  influxdb_config:
