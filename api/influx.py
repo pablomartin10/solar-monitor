@@ -38,7 +38,7 @@ class InfluxWriter:
                     .tag("group",         group_name)
                     .tag("metric",        metric_name)
                     .field("value",       float(value))
-                    .time(now, WritePrecision.SECONDS)
+                    .time(now, WritePrecision.5)
                 )
                 points.append(p)
         try:
