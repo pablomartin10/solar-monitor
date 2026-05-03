@@ -207,15 +207,14 @@ cd solar-monitor
 ### Error: "Docker no está instalado"
 
 ```bash
-# Instala Docker
-# Linux (Ubuntu/Debian):
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-
-# Mac: Descarga Docker Desktop desde:
-# https://www.docker.com/products/docker-desktop
-
+# Instala Docker Desktop (incluye Docker Compose)
+# Linux: https://docs.docker.com/engine/install/
+# Mac: https://www.docker.com/products/docker-desktop
 # Windows: WSL2 + Docker Desktop
+
+# Para Linux, después de instalar:
+sudo usermod -aG docker $USER
+Docker Compose viene incluido en Docker 20.10+
 ```
 
 ### Error: "Falta: api/main.py"

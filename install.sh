@@ -154,7 +154,7 @@ check_requirements() {
         print_success "Docker instalado"
     fi
     
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    if ! docker compose version &> /dev/null 2>&1; then
         missing+=("Docker Compose")
         print_error "Docker Compose no instalado"
     else
@@ -271,20 +271,20 @@ start_services() {
     cd "$SCRIPT_DIR"
     
     print_info "Descargando imágenes Docker (esto puede tardar 1-2 minutos)..."
-    docker-compose pull
+    docker compose pull
     
     print_info "Iniciando contenedores..."
-    docker-compose up -d
+    docker compose up -d
     
     # Wait for services to be ready
     print_info "Esperando a que los servicios estén listos..."
     sleep 10
     
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "Up"; then
         print_success "Servicios iniciados"
     else
         print_error "Algunos servicios no se iniciaron correctamente"
-        print_info "Verifica los logs con: docker-compose logs"
+        print_info "Verifica los logs con: docker compose logs"
         exit 1
     fi
 }
@@ -353,11 +353,12 @@ show_next_steps() {
     echo ""
     
     echo -e "${GREEN}Comandos útiles:${NC}"
-    echo "  Ver logs:           docker compose logs -f"
-    echo "  Ver logs de API:    docker compose logs -f api"
-    echo "  Ver health status:  curl http://localhost/api/health | jq ."
-    echo "  Parar servicios:    docker compose down"
-    echo "  Reiniciar:          docker compose restart"
+    echo "  Ver logs:              docker compose logs -f"
+    echo "  Ver logs de API:       docker compose logs -f api"
+    echo "  Ver health status:     curl http://localhost/api/health | jq ."
+    echo "  Parar servicios:       docker compose down"
+    echo "  Reiniciar:             docker compose restart"
+    echo "  Reconstruir API:       docker compose build api && docker compose up -d"
     echo ""
     
     echo -e "${GREEN}Documentación:${NC}"

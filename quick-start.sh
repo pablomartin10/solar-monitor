@@ -66,6 +66,17 @@ fi
 
 print_success "Docker detectado"
 
+# Check Docker Compose
+if ! docker compose version &> /dev/null 2>&1; then
+    print_error "Docker Compose no está disponible"
+    echo ""
+    echo "Docker Compose debe venir con Docker Desktop."
+    echo "Asegúrate de que Docker está actualizado."
+    exit 1
+fi
+
+print_success "Docker Compose disponible"
+
 # Choose install location
 print_header "Ubicación de instalación"
 
