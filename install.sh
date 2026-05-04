@@ -110,6 +110,7 @@ verify_project_structure() {
         "dashboard/nginx.conf"
         "config/deye_hybrid.yaml"
         "config/deye_4mppt.yaml"
+        "config/deye_micro.yaml"
     )
     
     local missing=()

@@ -14,6 +14,7 @@ CONFIG_DIR = Path("/app/config")
 YAML_MAP = {
     "hybrid": "deye_hybrid.yaml",
     "4mppt":  "deye_4mppt.yaml",
+    "micro": "deye_micro.yaml",
 }
 RETRY_ATTEMPTS = 2
 
