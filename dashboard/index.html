@@ -165,6 +165,7 @@
       <div class="frow">
         <label>Tipo</label>
         <select id="fType">
+          <option value="micro">Deye Micro (4 MPPT)</option>
           <option value="hybrid">Deye Hybrid (2 MPPT)</option>
           <option value="4mppt">Deye 4 MPPT</option>
         </select>
@@ -260,13 +261,13 @@ function render() {
 
   grid.innerHTML = inverters.map(inv => {
     const dotCls = inv.status === 'online' ? '' : inv.status === 'offline' ? 'offline' : 'loading';
-    const typeLbl = inv.type === 'hybrid' ? 'Hybrid 2MPPT' : '4 MPPT';
+    const typeLbl = inv.type === 'hybrid' ? 'Hybrid 2MPPT' : inv.type === 'micro' ? 'Micro 4MPPT' : '4 MPPT';
     const snLabel = inv.serial || 'SN N/A';
     const body = inv.status === 'loading' || inv.status === 'unknown'
       ? `<div class="no-data">Conectando…</div>`
       : inv.status === 'offline' || !inv.data
         ? `<div class="no-data">Sin datos — inversor desconectado</div>`
-        : (inv.type === 'hybrid' ? renderHybrid(inv) : render4MPPT(inv));
+        : (inv.type === 'hybrid' ? renderHybrid(inv) : (inv.type === 'micro' || inv.type === '4mppt' ? render4MPPT(inv) : render4MPPT(inv)));
 
     return `<div class="inv-card">
       <div class="inv-header">
