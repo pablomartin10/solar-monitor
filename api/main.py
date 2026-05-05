@@ -37,7 +37,7 @@ if POLL_INTERVAL < MIN_POLL_INTERVAL or POLL_INTERVAL > MAX_POLL_INTERVAL:
     POLL_INTERVAL = max(MIN_POLL_INTERVAL, min(POLL_INTERVAL, MAX_POLL_INTERVAL))
     log.warning(f"POLL_INTERVAL adjusted to {POLL_INTERVAL}s (valid range: {MIN_POLL_INTERVAL}-{MAX_POLL_INTERVAL}s)")
 
-SUPPORTED_INVERTER_TYPES = {"hybrid", "4mppt"}
+SUPPORTED_INVERTER_TYPES = {"hybrid", "4mppt", "micro", "sg04_sg02"}
 POLL_STATS = {"total": 0, "success": 0, "failure": 0, "last_poll": None}
 
 # ── In-memory state ───────────────────────────────────────────────────────────

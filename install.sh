@@ -111,6 +111,7 @@ verify_project_structure() {
         "config/deye_hybrid.yaml"
         "config/deye_4mppt.yaml"
         "config/deye_micro.yaml"
+        "config/deye_sg04_sg02.yaml"
     )
     
     local missing=()

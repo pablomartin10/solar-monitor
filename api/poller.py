@@ -15,6 +15,7 @@ YAML_MAP = {
     "hybrid": "deye_hybrid.yaml",
     "4mppt":  "deye_4mppt.yaml",
     "micro": "deye_micro.yaml",
+    "sg04_sg02": "deye_sg04_sg02.yaml",
 }
 RETRY_ATTEMPTS = 2
 
